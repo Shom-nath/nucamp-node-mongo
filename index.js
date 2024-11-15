@@ -1,39 +1,53 @@
 const { MongoClient } = require('mongodb-legacy');
 const assert = require('assert').strict;
+const dboper = require('./operations');
 
 const url = 'mongodb://localhost:27017';
 const dbName = "nucampsite";
 
-MongoClient.connect(url,{},(err,client) => {
-    assert.strictEqual(err,undefined);
+MongoClient.connect(url, {}, (err, client) => {
+    assert.strictEqual(err, undefined);
     console.log("Connected correctly to server");
 
     const db = client.db(dbName);
 
-    db.dropCollection('campsites', (err, result) => {    
-        assert.strictEqual(err,undefined);
+    db.dropCollection('campsites', (err, result) => {
+        assert.strictEqual(err, undefined);
         console.log("Collection dropped", result);
-        
-        const collection = db.collection('campsites');
+
 
         const documentToInsert = { name: "Breadcrumb Trail Campground", description: "Test" };
-        collection.insertOne(documentToInsert, (err, result) => {
-            assert.strictEqual(err,undefined);
+        dboper.insertDocument(db, documentToInsert, "campsites", result => {
+
             console.log("Insert Document: ", {
                 _id: result.insertedId,
                 ...documentToInsert
             });
 
-            collection.find().toArray((err,docs) => {
-                assert.strictEqual(err,undefined);
+            dboper.findDocuments(db, "campsites", docs => {
                 console.log("Found Documents: ", docs);
 
-                client.close();
+                dboper.updateDocument(db, { name: "Breadcrumb Trail Campground" }, { description: "Updated Test Description" }, "campsites", result => {
+                    console.log("Updated Document Count: ", result.modifiedCount);
+
+                    dboper.findDocuments(db, "campsites", docs => {
+                        console.log("Found Documents: ", docs);
+
+                        dboper.removeDocument(db, { name: "Breadcrumb Trail Campground" }, "campsites", result => {
+                            console.log("Deleted Document Count: ", result.deletedCount);
+                            client.close();
+                        });
+                    });
+                });
+
             });
+
+
+            
 
         });
 
     });
-    
+
 
 });
